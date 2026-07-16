@@ -53,3 +53,4 @@ def delete_task(task_id: int):
             task_db.pop(index)
             return Response(status_code=204)
         raise HTTPException(status_code=204, detail="Task not found")
+# Stage5 completed
