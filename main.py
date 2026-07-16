@@ -8,3 +8,4 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+#Stage2 checkpoint completed
