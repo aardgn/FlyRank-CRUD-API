@@ -1,12 +1,41 @@
 # FlyRank Internship - To-Do CRUD API
 
-This is a small RESTful API that manages a to-do list built with Python and FastAPI. Data is stored in-memory.
+This is a RESTful API that manages a to-do list built with Python and FastAPI. 
+**Update (Stage A2):** The data storage has been migrated from an in-memory list to a persistent PostgreSQL database running in Docker.
 
-## How to Run
+## 🚀 How to Run (Docker)
 
-1. Install dependencies: `pip install fastapi uvicorn pydantic`
-2. Start the server: `uvicorn main:app --reload`
+The entire stack (the FastAPI application and the PostgreSQL database) is containerized.
+
+1. Create your environment file from the provided example:
+   ```bash
+   cp .env.example .env
+   ```
+2. Start the application and database together:
+   ```bash
+   docker compose up -d
+   ```
 3. The API will be available at `http://localhost:8000`
+4. Interactive Swagger UI is at `http://localhost:8000/docs`
+
+## 🏗️ Architecture & Database Migration
+
+* **Service and Routes Unchanged:** A new PostgreSQL repository (`repository.py`) was written to handle all SQL queries. It implements the exact same interface as the old in-memory store. Because of this clean separation, **the service and routes in `main.py` remained completely unchanged.**
+* **Environment Variables:** The database connection string is securely loaded from the `.env` file (which is gitignored). A `.env.example` file is committed to the repo to show the expected format.
+
+## 💾 Proof of Persistence
+
+The PostgreSQL database runs inside a Docker container with a configured **named volume** (`pgdata`). Persistence was verified with the following steps:
+1. Started the stack with `docker compose up -d`.
+2. Created a new task via `POST /tasks`:
+   ```bash
+   curl -X POST http://localhost:8000/tasks -H "Content-Type: application/json" -d '{"title":"Persistence Test"}'
+   ```
+3. Destroyed the running containers using `docker compose down`.
+4. Restarted the stack with `docker compose up -d`.
+5. Sent a `GET /tasks` request and confirmed the task was still there, proving the volume successfully persisted the data.
+
+---
 
 ## Endpoints
 
@@ -33,10 +62,13 @@ date: Thu, 16 Jul 2026 17:52:41 GMT
 server: uvicorn
 content-length: 40
 content-type: application/json
+
 {"id":1,"title":"Buy milk","done":false}
 ```
 
 ![Swagger UI Screenshot](swagger.png)
+
+---
 
 ## AI vs Me
 
