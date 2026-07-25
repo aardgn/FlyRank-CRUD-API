@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
+import repository_sqlite as repository
 app = FastAPI()
-task_db = []
+repository.init_db()
+
 class TaskCreate(BaseModel):
     title: str
 class TaskUpdate(BaseModel):
@@ -9,7 +11,7 @@ class TaskUpdate(BaseModel):
     done: bool
 @app.get("/")
 def read_root():
-    return {"name": "Task API", "version": "1.0", "endpoints": ["/task"]}
+    return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
 
 @app.get("/health")
 def health_check():
@@ -17,40 +19,35 @@ def health_check():
 #Stage2 checkpoint completed
 @app.get("/tasks")
 def get_all_tasks():
-    return task_db
+    return repository.get_all()
 @app.get("/tasks/{task_id}")
 def get_single_task(task_id: int):
-    for task in task_db:
-        if task["id"] == task_id:
-            return task
+    task = repository.get_by_id(task_id)
+    if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    else:
+        return task
+
 @app.post("/tasks", status_code=201)
 def task_create(task: TaskCreate):
     if not task.title.strip():
         raise HTTPException(status_code=400, detail="Title cannot be empty")
-    new_id = max(t["id"] for t in task_db) + 1 if task_db else 1
-    new_task = {
-        "id": new_id,
-        "title": task.title,
-        "done": False
-    }
-    task_db.append(new_task)
-    return new_task
+    return repository.create(task.title)
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, task: TaskUpdate):
         if not task.title.strip():
             raise HTTPException(status_code=400, detail="Title cannot be empty")
-        for t in task_db:
-            if t["id"] == task_id:
-                t["title"] = task.title
-                t["done"] = task.done
-                return t
-        raise HTTPException(status_code=404, detail="Task not found")
+        new = repository.update(task_id, task.title, task.done)
+        if new is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        else:
+            return new
 @app.delete("/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int):
-    for index, t in enumerate(task_db):
-        if t["id"] == task_id:
-            task_db.pop(index)
-            return Response(status_code=204)
+    erase = repository.delete(task_id)
+    if erase is False:
         raise HTTPException(status_code=404, detail="Task not found")
-# Stage5 completed
+    else:
+        return Response(status_code=204)
+
+# Stage5  Swagger UI completed
