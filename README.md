@@ -36,7 +36,82 @@ The PostgreSQL database runs inside a Docker container with a configured **named
 5. Sent a `GET /tasks` request and confirmed the task was still there, proving the volume successfully persisted the data.
 
 ---
+---
 
+## SQLite Version (Assignment W3·A1)
+
+As a separate exercise, this project was also connected to a lightweight **SQLite**
+database, kept alongside the PostgreSQL version rather than replacing it. This proves
+the same architectural point twice, with two different databases: the storage layer
+can change completely without touching the API.
+
+### Why SQLite for this exercise
+
+This project is small and single-user, not a big, concurrent, multi-service system —
+SQLite is a simpler fit for that scale than running a full Postgres server in Docker.
+It requires no server process and no container at all: it's a single file, and Python's
+standard library can talk to it directly.
+
+### Where the database lives
+
+The database is a single file, `tasks.db`, created automatically in the project's root
+folder (`crud-api/`) the first time the app runs. It didn't exist before that — no setup
+step is needed to create it.
+
+### How to run it
+
+```bash
+cd crud-api
+source .venv/bin/activate
+uvicorn main:app --reload
+```
+
+`tasks.db` is created automatically, the `tasks` table is created if it doesn't exist,
+and three example tasks are inserted only the first time the table is empty.
+
+### Architecture: same interface, new implementation
+
+Just like the PostgreSQL migration, the SQLite version implements the exact same
+repository interface (`get_all`, `get_by_id`, `create`, `update`, `delete`) as an
+in-memory store or a Postgres store would — the file is `repository_sqlite.py`, and
+`main.py` only had to change one import line to switch to it:
+
+```python
+import repository_sqlite as repository
+```
+
+No route, no service logic, and no status code handling changed to make this work.
+
+### Proof of Persistence
+
+1. Started the app with `uvicorn main:app --reload`.
+2. Created tasks via `POST /tasks` through Swagger UI.
+3. Stopped the server completely (`Ctrl+C`), then restarted it (`uvicorn main:app`).
+4. Sent `GET /tasks` and confirmed the previously created tasks were still there —
+   proof that SQLite persisted the data across a full restart, not just a `--reload`.
+
+### Exploring the database manually
+
+Opened the database directly from the terminal:
+
+```bash
+sqlite3 tasks.db
+```
+
+Ran several queries by hand and confirmed the API reflected each change immediately
+afterward. The most instructive one was:
+
+```sql
+UPDATE tasks SET done = 1;
+```
+
+Running this manually marked every task as done directly in the database — no code,
+no API call — and the very next `GET /tasks` request through the API immediately
+returned every task with `"done": true`. That's the clearest demonstration in this
+whole exercise that the API has no memory of its own: it only ever reflects whatever
+is actually in the database at the moment it's asked.
+
+![SQLite DB Screenshot](sqlite_screenshot.png)
 ## Endpoints
 
 | HTTP Method | Path | Description |
