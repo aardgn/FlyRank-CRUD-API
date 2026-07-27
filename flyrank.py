@@ -100,4 +100,4 @@ def logout(user = Depends(get_current_user)):
 
 @app.get("/protected/dashboard")
 def protected_dashboard(user = Depends(get_current_user)):
-    return {"message": "Welcome to your dashboard, {user.email}"}
+    return {"message": f"Welcome to your dashboard, {user.email}"}
