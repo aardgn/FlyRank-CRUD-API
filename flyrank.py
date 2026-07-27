@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 import repository_sqlite as repository
 from supabase_client import supabase
-
+from fastapi import Header
 
 app = FastAPI()
 repository.init_db()
@@ -73,3 +73,14 @@ def login(auth: AuthRequest):
         return {"access_token": result.session.access_token, "refresh_token": result.session.refresh_token}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid login credentials")
+
+@app.get("/public/info")
+def public_info():
+    return {"message": "Welcome stranger! This info is public."}
+
+@app.get("/protected/profile")
+def protected_profile(authorization: str = Header(None)):
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Access token required.")
+    token = authorization.replace("Bearer", "")
+    return {"token_received": token}
