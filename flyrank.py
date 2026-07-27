@@ -4,7 +4,9 @@ import repository_sqlite as repository
 from supabase_client import supabase
 from fastapi import Header
 from fastapi import Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+security = HTTPBearer()
 app = FastAPI()
 repository.init_db()
 
@@ -79,10 +81,8 @@ def login(auth: AuthRequest):
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
-def get_current_user(authorization: str = Header(None)):
-    if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Access token required")
-    token = authorization.replace("Bearer ", "")
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
     try:
         result = supabase.auth.get_user(token)
         return result.user
