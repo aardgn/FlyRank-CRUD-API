@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import repository_sqlite as repository
 from supabase_client import supabase
 from fastapi import Header
+from fastapi import Depends
 
 app = FastAPI()
 repository.init_db()
@@ -78,14 +79,25 @@ def login(auth: AuthRequest):
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
-@app.get("/protected/profile")
-def protected_profile(authorization: str = Header(None)):
+def get_current_user(authorization: str = Header(None)):
     if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Access token required.")
+        raise HTTPException(status_code=401, detail="Access token required")
     token = authorization.replace("Bearer ", "")
     try:
         result = supabase.auth.get_user(token)
-        return {"id": result.user.id, "email": result.user.email, "created_at": result.user.created_at}
-    except Exception as e:
-        print(f"HATA: {e}")
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return result.user
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+
+@app.get("/protected/profile")
+def protected_profile(user = Depends(get_current_user)):
+    return {"id": user.id, "email": user.email, "created_at": user.created_at}
+
+@app.post("/auth/logout", status_code=204)
+def logout(user = Depends(get_current_user)):
+    supabase.auth.sign_out()
+    return Response(status_code=204)
+
+@app.get("/protected/dashboard")
+def protected_dashboard(user = Depends(get_current_user)):
+    return {"message": "Welcome to your dashboard, {user.email}"}
