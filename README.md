@@ -192,3 +192,64 @@ structure — only the endpoints and status codes.
 If I rewrote the prompt, I'd fix my own PUT/title status code mistake (400, not 404) and
 explicitly state the data structure (a list vs a dict) so the AI's internal implementation
 choices matched mine more closely.
+
+
+---
+
+## Authentication (Assignment W2·A4)
+
+This project now includes a full authentication system built with **Supabase Auth** as
+the Identity Provider. No passwords are stored or hashed by this application — Supabase
+handles that entirely; this API only ever sends credentials to Supabase and verifies the
+tokens it hands back.
+
+### Setup
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In your Supabase Dashboard, go to **Project Settings → API** and copy your **Project
+   URL** and **anon key** (never the `service_role` key).
+3. Add them to your `.env` file (see `.env.example` for the expected format):
+   ```
+   SUPABASE_URL=your_project_url
+   SUPABASE_KEY=your_anon_key
+   ```
+4. In **Authentication → Providers → Email**, turn off "Confirm email" for local testing
+   (in production this should stay on).
+5. Run the server:
+   ```bash
+   source .venv/bin/activate
+   uvicorn flyrank:app --reload
+   ```
+
+### Endpoints
+
+| Method | Path | Auth required | Description |
+|---|---|---|---|
+| POST | `/auth/signup` | None | Create a new user account |
+| POST | `/auth/login` | None | Authenticate and receive a JWT access token |
+| POST | `/auth/logout` | Bearer token | End the current session |
+| GET | `/protected/profile` | Bearer token | Read the authenticated user's profile |
+| GET | `/protected/dashboard` | Bearer token | Second protected route, reusing the same guard |
+| GET | `/public/info` | None | Open, unauthenticated data |
+
+### Architecture: one reusable guard
+
+Token verification lives in a single dependency function, `get_current_user`, built on
+FastAPI's `HTTPBearer` security scheme. Every protected route takes this dependency as a
+parameter instead of repeating auth logic — adding a new protected route (like
+`/protected/dashboard`) required zero new authentication code, only reusing the existing
+guard.
+
+### Proof it actually verifies tokens
+
+- A request to a protected route with **no token** → `401 Access token required`.
+- A request with a **malformed or invalid token** (e.g. a random string) → `401 Invalid
+  or expired token`.
+- A request with a **valid JWT from a real login** → `200`, with the real user's data.
+
+### Swagger UI
+
+`/docs` now shows a lock icon next to every protected route, and an "Authorize" button
+that accepts a bearer token once and reuses it across all protected endpoints.
+
+![Swagger Auth Screenshot](swagger_auth.png)
