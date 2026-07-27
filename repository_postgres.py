@@ -1,11 +1,11 @@
-import os 
+import os
 import psycopg2
 from dotenv import load_dotenv
+
 load_dotenv()
 
-def get_connection(): 
+def get_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
-
 
 def get_all():
     conn = get_connection()
@@ -14,7 +14,6 @@ def get_all():
     rows = cur.fetchall()
     cur.close()
     conn.close()
-
     result = []
     for row in rows:
         result.append({"id": row[0], "title": row[1], "done": row[2]})
@@ -73,4 +72,3 @@ def delete(task_id):
         return False
     else:
         return True
-    
