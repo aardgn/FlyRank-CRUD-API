@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 import repository_sqlite as repository
+from supabase_client import supabase
+
 app = FastAPI()
 repository.init_db()
 
