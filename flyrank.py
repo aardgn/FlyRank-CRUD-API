@@ -82,5 +82,10 @@ def public_info():
 def protected_profile(authorization: str = Header(None)):
     if authorization is None or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Access token required.")
-    token = authorization.replace("Bearer", "")
-    return {"token_received": token}
+    token = authorization.replace("Bearer ", "")
+    try:
+        result = supabase.auth.get_user(token)
+        return {"id": result.user.id, "email": result.user.email, "created_at": result.user.created_at}
+    except Exception as e:
+        print(f"HATA: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
