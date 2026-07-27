@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import repository_sqlite as repository
 from supabase_client import supabase
 
+
 app = FastAPI()
 repository.init_db()
 
@@ -52,4 +53,23 @@ def delete_task(task_id: int):
     else:
         return Response(status_code=204)
 
-# Stage5  Swagger UI completed
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/auth/signup", status_code=201)
+def signup(auth: AuthRequest):
+    if not auth.email.strip() or not auth.password.strip():
+        raise HTTPException(status_code=400, detail="Email and password required.")
+    result = supabase.auth.sign_up({"email": auth.email, "password": auth.password})
+    return result.user
+
+@app.post("/auth/login")
+def login(auth: AuthRequest):
+    if not auth.email.strip() or not auth.password.strip():
+        raise HTTPException(status_code=400, detail="Email and password required.")
+    try:
+        result = supabase.auth.sign_in_with_password({"email": auth.email, "password": auth.password})
+        return {"access_token": result.session.access_token, "refresh_token": result.session.refresh_token}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid login credentials")
